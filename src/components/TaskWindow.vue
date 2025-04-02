@@ -89,6 +89,7 @@ const emit = defineEmits(['update-bandwidth', 'toggle-adaptive', 'toggle-task'])
 const bandwidthInput = ref(formatNumber(props.bandwidth))
 const adaptiveMode = ref(props.isAdaptive)
 const isBandwidthChanged = ref(false)
+const debounceTimer = ref(null)
 
 // 格式化数字，保留两位小数
 function formatNumber(num) {
@@ -103,6 +104,13 @@ function handleBandwidthInput(event) {
   const formattedValue = formatNumber(value)
   bandwidthInput.value = formattedValue
   isBandwidthChanged.value = formattedValue !== formatNumber(props.bandwidth)
+  
+  // 立即更新带宽，不再等待防抖
+  if (!props.isAdaptive && isBandwidthChanged.value) {
+    const value = Number(bandwidthInput.value)
+    emit('update-bandwidth', props.taskId, value)
+    isBandwidthChanged.value = false
+  }
 }
 
 // 监听带宽变化更新输入框
@@ -146,7 +154,7 @@ const toggleTask = () => {
   background: var(--military-dark);
   border: 1px solid var(--military-green);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   cursor: pointer;
 }
@@ -154,12 +162,23 @@ const toggleTask = () => {
 .task-window:hover {
   border-color: var(--military-highlight);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
 }
 
 .task-window.inactive {
   opacity: 0.85;
   border-color: var(--military-red);
   transform: scale(0.98);
+}
+
+.task-window:active {
+  transform: none;
+}
+
+.task-window:active .info-panel,
+.task-window:active .adaptive-control,
+.task-window:active .toggle-container {
+  transform: none;
 }
 
 .status-indicator {
@@ -181,7 +200,7 @@ const toggleTask = () => {
   border-radius: 50%;
   background-color: var(--military-red);
   box-shadow: 0 0 8px rgba(163, 65, 65, 0.4);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .status-indicator.active .status-dot {
@@ -216,7 +235,7 @@ const toggleTask = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .overlay-content {
@@ -292,7 +311,7 @@ const toggleTask = () => {
   height: 8px;
   border-radius: 50%;
   background-color: var(--military-red);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   box-shadow: 0 0 8px rgba(163, 65, 65, 0.4);
 }
 
@@ -339,7 +358,7 @@ const toggleTask = () => {
   color: var(--military-text);
   font-family: monospace;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   -moz-appearance: textfield;
 }
 
@@ -369,7 +388,7 @@ const toggleTask = () => {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.1s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -377,6 +396,12 @@ const toggleTask = () => {
 .set-button:hover:not(:disabled) {
   background: var(--military-blue);
   border-color: var(--military-highlight);
+  transform: translateY(-1px);
+}
+
+.set-button:active:not(:disabled) {
+  transform: translateY(1px);
+  transition: all 0.05s ease;
 }
 
 .set-button:disabled {
@@ -391,12 +416,23 @@ const toggleTask = () => {
   align-items: center;
   gap: 12px;
   user-select: none;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .toggle-container {
   cursor: pointer;
   width: 44px;
   height: 24px;
+  transition: all 0.05s ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.toggle-container:active {
+  transform: none;
 }
 
 .toggle-label {
@@ -418,7 +454,7 @@ const toggleTask = () => {
   background: var(--military-dark);
   border: 1px solid var(--military-green);
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: all 0.05s ease;
 }
 
 .toggle-slider:before {
@@ -430,7 +466,7 @@ const toggleTask = () => {
   border-radius: 50%;
   top: 2px;
   left: 2px;
-  transition: all 0.3s ease;
+  transition: all 0.5s ease;
 }
 
 .toggle-input:checked + .toggle-slider {
